@@ -1,0 +1,17 @@
+﻿# Credenciales y configuraciones privadas
+.streamlit/secrets.toml
+.env
+.env.*
+!.env.example
+
+# Datos de investigacion
+private/
+runs/
+*.sqlite3
+
+# Entornos y archivos temporales
+.venv/
+.venv_gpu/
+__pycache__/
+.pytest_cache/
+*.pyc
