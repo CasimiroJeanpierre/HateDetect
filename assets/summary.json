@@ -1,0 +1,46 @@
+{
+  "schema": "hatedetect.public-summary.v1",
+  "origin": "sintetico",
+  "selected_model": "logistic",
+  "split_sizes": {
+    "train": 50,
+    "validation": 11,
+    "test": 11
+  },
+  "transformer_included": true,
+  "model_sha256": "acb50ded09ca2b782210b730c915e3709f75c6767cf8cdebc6189fe6cc324b73",
+  "results": [
+    {
+      "model_name": "Reglas de contexto v2",
+      "validation_macro_f1": 0.5079365079365079,
+      "macro_f1": 0.4962962962962963,
+      "balanced_accuracy": 0.6,
+      "precision_odio": 0.0,
+      "recall_odio": 0.0
+    },
+    {
+      "model_name": "TF-IDF + LogisticRegression",
+      "validation_macro_f1": 0.7666666666666666,
+      "macro_f1": 0.4523809523809524,
+      "balanced_accuracy": 0.4666666666666666,
+      "precision_odio": 0.5,
+      "recall_odio": 0.6666666666666666
+    },
+    {
+      "model_name": "TF-IDF + LinearSVC",
+      "validation_macro_f1": 0.7666666666666666,
+      "macro_f1": 0.3904761904761904,
+      "balanced_accuracy": 0.4222222222222222,
+      "precision_odio": 0.5,
+      "recall_odio": 0.6666666666666666
+    },
+    {
+      "model_name": "Transformer XLM-RoBERTa multilingüe",
+      "validation_macro_f1": 0.14285714285714285,
+      "macro_f1": 0.14285714285714285,
+      "balanced_accuracy": 0.3333333333333333,
+      "precision_odio": 0.2727272727272727,
+      "recall_odio": 1.0
+    }
+  ]
+}
