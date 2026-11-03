@@ -12,6 +12,7 @@ import streamlit as st
 
 from auth_google import render_login, save_history, list_history, delete_history
 from access_roles import access_role, can_use_private_history
+from batch_classification import render_batch_page
 
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / 'assets'
@@ -53,7 +54,7 @@ def load_model():
 
 st.sidebar.title('🛡️ HateDetect')
 st.sidebar.caption('Capstone UPN — demostración pública')
-page = st.sidebar.radio('Sección', ['Clasificación', 'Reportes', 'Historial'])
+page = st.sidebar.radio('Sección', ['Clasificación', 'Clasificación por lotes', 'Reportes', 'Historial'])
 st.sidebar.divider()
 st.sidebar.warning('Prototipo académico: no es un sistema de moderación autónoma.')
 st.sidebar.caption('Sin acceso al panel de anotadores ni a datos privados de evaluadores.')
@@ -125,6 +126,9 @@ if page == 'Clasificación':
                         'Tiempo (ms)': round(elapsed, 3)
                     })
                     st.success('Guardado solo en esta sesión.')
+
+elif page == 'Clasificación por lotes':
+    render_batch_page(model, clean_for_inference)
 
 elif page == 'Reportes':
     st.title('Evaluación de modelos')
