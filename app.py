@@ -12,6 +12,7 @@ import streamlit as st
 
 from auth_google import render_login, save_history, list_history, delete_history
 from access_roles import access_role, can_use_private_history
+from batch_classification import render_batch_page
 
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / 'assets'
@@ -76,7 +77,17 @@ except (OSError, ValueError, ImportError):
 if 'session_history' not in st.session_state:
     st.session_state.session_history = []
 
+# La clasificación individual y masiva comparten sección en el menú.
+modo = None
 if page == 'Clasificación':
+    modo = st.segmented_control(
+        'Modalidad de clasificación',
+        options=['Individual', 'Por lotes'],
+        default='Individual',
+        key='modo_clasificacion',
+    )
+
+if page == 'Clasificación' and modo == 'Individual':
     st.title('Clasificación de comentarios')
     st.info('Solo datos sintéticos de demostración. No introduzcas datos personales.')
     st.caption('TF-IDF + LogisticRegression, seleccionado mediante validación.')
@@ -125,6 +136,9 @@ if page == 'Clasificación':
                         'Tiempo (ms)': round(elapsed, 3)
                     })
                     st.success('Guardado solo en esta sesión.')
+
+elif page == 'Clasificación' and modo == 'Por lotes':
+    render_batch_page(model, clean_for_inference)
 
 elif page == 'Reportes':
     st.title('Evaluación de modelos')
