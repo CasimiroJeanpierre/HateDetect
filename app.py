@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from auth_google import render_login, save_history, list_history, delete_history
+from access_roles import access_role, can_use_private_history
 
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / 'assets'
@@ -57,6 +58,14 @@ st.sidebar.divider()
 st.sidebar.warning('Prototipo académico: no es un sistema de moderación autónoma.')
 st.sidebar.caption('Sin acceso al panel de anotadores ni a datos privados de evaluadores.')
 client, uid = render_login()
+role = access_role(client, uid)
+if uid:
+    if role is None:
+        st.sidebar.error('Cuenta sin autorización para funciones privadas de HateDetect.')
+    elif role == 'evaluator':
+        st.sidebar.info('Rol Evaluador: funciones de anotación aún no publicadas.')
+    else:
+        st.sidebar.success('Acceso autorizado: ' + ('Administrador' if role == 'admin' else 'Moderador'))
 
 try:
     summary, model = load_summary(), load_model()
@@ -73,7 +82,7 @@ if page == 'Clasificación':
     st.caption('TF-IDF + LogisticRegression, seleccionado mediante validación.')
     input_text = st.text_area('Comentario a analizar', max_chars=2000, height=150,
                               placeholder='Escribe un comentario sintético en español o inglés')
-    if uid:
+    if uid and can_use_private_history(role):
         save = st.checkbox('Guardar clasificación en mi Historial persistente', value=False)
     else:
         save = st.checkbox('Guardar temporalmente en esta sesión', value=False)
@@ -103,7 +112,7 @@ if page == 'Clasificación':
             st.write('Texto procesado')
             st.code(cleaned, language=None)
             if save:
-                if client is not None and uid:
+                if client is not None and uid and can_use_private_history(role):
                     try:
                         save_history(client, uid, cleaned, prediction, elapsed)
                         st.success('Guardado en tu Historial persistente privado.')
@@ -144,7 +153,7 @@ elif page == 'Reportes':
 
 else:
     st.title('Historial de clasificaciones')
-    if client is not None and uid:
+    if client is not None and uid and can_use_private_history(role):
         st.success('Sesión autenticada. Los registros se conservan en Supabase y están protegidos con RLS.')
         try:
             records = list_history(client, uid)
