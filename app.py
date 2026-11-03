@@ -54,7 +54,7 @@ def load_model():
 
 st.sidebar.title('🛡️ HateDetect')
 st.sidebar.caption('Capstone UPN — demostración pública')
-page = st.sidebar.radio('Sección', ['Clasificación', 'Clasificación por lotes', 'Reportes', 'Historial'])
+page = st.sidebar.radio('Sección', ['Clasificación', 'Reportes', 'Historial'])
 st.sidebar.divider()
 st.sidebar.warning('Prototipo académico: no es un sistema de moderación autónoma.')
 st.sidebar.caption('Sin acceso al panel de anotadores ni a datos privados de evaluadores.')
@@ -77,7 +77,17 @@ except (OSError, ValueError, ImportError):
 if 'session_history' not in st.session_state:
     st.session_state.session_history = []
 
+# La clasificación individual y masiva comparten sección en el menú.
+modo = None
 if page == 'Clasificación':
+    modo = st.segmented_control(
+        'Modalidad de clasificación',
+        options=['Individual', 'Por lotes'],
+        default='Individual',
+        key='modo_clasificacion',
+    )
+
+if page == 'Clasificación' and modo == 'Individual':
     st.title('Clasificación de comentarios')
     st.info('Solo datos sintéticos de demostración. No introduzcas datos personales.')
     st.caption('TF-IDF + LogisticRegression, seleccionado mediante validación.')
@@ -127,7 +137,7 @@ if page == 'Clasificación':
                     })
                     st.success('Guardado solo en esta sesión.')
 
-elif page == 'Clasificación por lotes':
+elif page == 'Clasificación' and modo == 'Por lotes':
     render_batch_page(model, clean_for_inference)
 
 elif page == 'Reportes':
