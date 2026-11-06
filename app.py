@@ -1,18 +1,17 @@
 """HateDetect — demostración pública académica y Historial Supabase por usuario."""
-import hashlib
 import json
 import re
 import time
 import unicodedata
 from pathlib import Path
 
-import joblib
 import pandas as pd
 import streamlit as st
 
 from auth_google import render_login, save_history, list_history, delete_history
 from access_roles import access_role, can_use_private_history
 from batch_classification import render_batch_page
+from model_release import load_selected_model
 
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / 'assets'
@@ -44,12 +43,7 @@ def load_summary():
 
 @st.cache_resource(show_spinner='Cargando clasificador...')
 def load_model():
-    report = load_summary()
-    path = ASSETS / 'model.pkl'
-    if hashlib.sha256(path.read_bytes()).hexdigest() != report.get('model_sha256'):
-        raise ValueError('Integridad del modelo no válida')
-    # Only load the trusted locally trained and hashed artifact.
-    return joblib.load(path)
+    return load_selected_model(ASSETS, load_summary())
 
 
 st.sidebar.title('🛡️ HateDetect')
@@ -69,7 +63,7 @@ if uid:
         st.sidebar.success('Acceso autorizado: ' + ('Administrador' if role == 'admin' else 'Moderador'))
 
 try:
-    summary, model = load_summary(), load_model()
+    summary, (model, active_model) = load_summary(), load_model()
 except (OSError, ValueError, ImportError):
     st.error('No se pudo cargar el modelo público o los metadatos.')
     st.stop()
@@ -90,7 +84,7 @@ if page == 'Clasificación':
 if page == 'Clasificación' and modo == 'Individual':
     st.title('Clasificación de comentarios')
     st.info('Solo datos sintéticos de demostración. No introduzcas datos personales.')
-    st.caption('TF-IDF + LogisticRegression, seleccionado mediante validación.')
+    st.caption(f'TF-IDF + LogisticRegression · versión activa: {active_model}.')
     input_text = st.text_area('Comentario a analizar', max_chars=2000, height=150,
                               placeholder='Escribe un comentario sintético en español o inglés')
     if uid and can_use_private_history(role):
@@ -125,14 +119,15 @@ if page == 'Clasificación' and modo == 'Individual':
             if save:
                 if client is not None and uid and can_use_private_history(role):
                     try:
-                        save_history(client, uid, cleaned, prediction, elapsed)
+                        save_history(client, uid, cleaned, prediction, elapsed,
+                                     model_name=f'TF-IDF + LR ({active_model})')
                         st.success('Guardado en tu Historial persistente privado.')
                     except Exception:
                         st.error('No fue posible guardar. Revisa la sesión o la conexión a Supabase.')
                 else:
                     st.session_state.session_history.insert(0, {
                         'Texto': cleaned, 'Categoría': prediction,
-                        'Modelo': 'TF-IDF + LogisticRegression',
+                        'Modelo': f'TF-IDF + LR ({active_model})',
                         'Tiempo (ms)': round(elapsed, 3)
                     })
                     st.success('Guardado solo en esta sesión.')
@@ -161,7 +156,8 @@ elif page == 'Reportes':
         st.download_button('Exportar métricas CSV', data=table.to_csv(index=False).encode('utf-8-sig'),
                            file_name='hatedetect_metricas_sinteticas.csv', mime='text/csv')
         st.caption('Macro-F1: promedio no ponderado de los F1 de cada categoría.')
-    st.success('Modelo publicado: TF-IDF + LogisticRegression (seleccionado por validación).')
+    st.success(f'Modelo activo: TF-IDF + LogisticRegression ({active_model}).')
+    st.caption('La tabla anterior corresponde al experimento histórico de 72 comentarios, no a la evaluación v3 de 120.')
     st.caption('Los otros tres enfoques se comparan por métricas; no ejecutan inferencia en esta versión web.')
     st.caption('Solo 11 ejemplos de prueba: estimaciones exploratorias con incertidumbre considerable.')
 

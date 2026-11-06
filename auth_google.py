@@ -142,16 +142,23 @@ def render_login():
         return None, None
 
 
-def save_history(client, uid, cleaned, category, milliseconds):
+def save_history(client, uid, cleaned, category, milliseconds,
+                 model_name='TF-IDF + LogisticRegression'):
     """RLS enforces Auth UID; no user_id is accepted from the browser."""
     if client is None or not uid:
         raise PermissionError('Se necesita iniciar sesión')
     if category not in {'Odio', 'Ofensivo', 'Neutro'} or not 1 <= len(cleaned) <= 2000:
         raise ValueError('Datos inválidos')
+    if model_name not in {
+        'TF-IDF + LogisticRegression',
+        'TF-IDF + LR (published)',
+        'TF-IDF + LR (v3)',
+    }:
+        raise ValueError('Identificador de modelo no permitido')
     payload = {
         'comment_text': cleaned,
         'category': category,
-        'model_name': 'TF-IDF + LogisticRegression',
+        'model_name': model_name,
         'inference_ms': max(0.0, round(float(milliseconds), 3)),
     }
     return client.table('hatedetect_history').insert(payload).execute()
