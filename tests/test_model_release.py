@@ -40,7 +40,7 @@ def test_unsupported_selection_fail_closed():
 
 def test_published_load_and_predict(monkeypatch, tmp_path):
     _, summary = fixture_model(monkeypatch, tmp_path)
-    model, choice = release.load_selected_model(tmp_path, summary)
+    model, choice = release.load_selected_model(tmp_path, summary, "published")
     assert choice == "published"
     assert model.predict(["comentario", "otro"]) == ["Neutro", "Neutro"]
 
@@ -57,20 +57,20 @@ def test_reject_tampered_blob(monkeypatch, tmp_path):
     _, summary = fixture_model(monkeypatch, tmp_path)
     (tmp_path / "model.pkl").write_bytes(b"untrusted pickle")
     with pytest.raises(ValueError, match="SHA-256"):
-        release.load_selected_model(tmp_path, summary)
+        release.load_selected_model(tmp_path, summary, "published")
 
 
 def test_reject_summary_mismatch(monkeypatch, tmp_path):
     _, _ = fixture_model(monkeypatch, tmp_path)
     with pytest.raises(ValueError, match="resumen público"):
-        release.load_selected_model(tmp_path, {"model_sha256": "bad"})
+        release.load_selected_model(tmp_path, {"model_sha256": "bad"}, "published")
 
 
 def test_reject_library_version_mismatch(monkeypatch, tmp_path):
     cfg, summary = fixture_model(monkeypatch, tmp_path)
     cfg["published"]["sklearn_version"] = "0.0.0"
     with pytest.raises(ValueError, match="Incompatibilidad"):
-        release.load_selected_model(tmp_path, summary)
+        release.load_selected_model(tmp_path, summary, "published")
 
 
 def test_missing_v3_model_fails_not_fallback(tmp_path):
