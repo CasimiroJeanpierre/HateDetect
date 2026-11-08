@@ -24,8 +24,8 @@ MODEL_CONFIGS = {
     },
     "v3": {
         "filename": "model_v3.joblib",
-        "sha256": "7636ab070a11009db24f561d63200ae172f6dd7bd4340a74f881182ed6fd7c1f",
-        "sklearn_version": "1.8.0",  # NO compatible con requirements.txt de producción (1.9.1)
+        "sha256": "1b8d300ee3682437b724a2eccf8b9626526280e35e06c7cdaafe216843fe0470",
+        "sklearn_version": "1.9.1",  # Reentrenado con el corpus de desarrollo de 432
     },
 }
 

@@ -1,42 +1,89 @@
-# HateDetect v3 — integración candidata con bloqueo de despliegue
+﻿# HateDetect v3 - Integracion controlada en staging
 
-**Fecha de preparación:** 06/11/2026. **No modificar ni desplegar `main` automáticamente.**
+## 1. Alcance
 
-## Evidencia disponible (exploratoria)
+Integracion del candidato v3 sin modificar automaticamente la rama
+main ni la aplicacion publicada de Streamlit.
 
-- Modelo publicado, SHA-256 `acb50ded09ca2b782210b730c915e3709f75c6767cf8cdebc6189fe6cc324b73`, serializado en scikit-learn **1.9.1**.
-- Candidato v3, SHA-256 `7636ab070a11009db24f561d63200ae172f6dd7bd4340a74f881182ed6fd7c1f`, serializado en scikit-learn **1.8.0**.
-- En 120 comentarios sintéticos de prueba y referencia **asistida por IA**, Macro-F1 publicado 60,97 % vs v3 89,36 %. No se acredita validación humana independiente ni generalización a Reddit.
-- La app `main` fija `scikit-learn==1.9.1`. La versión v3 del binario es **incompatible** con ese entorno sin homologación. No actualizar requisitos a 1.8.0: rompería la compatibilidad del modelo publicado.
+## 2. Modelos
 
-## Aplicar sin tocar producción (Windows / PowerShell)
+### Modelo publicado
+- Archivo: assets/model.pkl
+- Scikit-learn: 1.9.1
+- SHA-256:
+  acb50ded09ca2b782210b730c915e3709f75c6767cf8cdebc6189fe6cc324b73
 
-1. Trabajar en el clon correcto `CasimiroJeanpierre/HateDetect`, con `git status --short` vacío. Confirmar que no hay cambios pendientes.
-2. `git switch main; git pull --ff-only; git switch -c feature/hatedetect-v3-staging-gated`
-3. Desde la carpeta descargada del paquete de integración:
+### Modelo v3 original
+- Scikit-learn: 1.8.0
+- SHA-256:
+  7636ab070a11009db24f561d63200ae172f6dd7bd4340a74f881182ed6fd7c1f
 
-   ```powershell
-   python .\apply_staging_patch.py "C:\ruta\a\HateDetect" --dry-run
-   python .\apply_staging_patch.py "C:\ruta\a\HateDetect"
-   ```
-4. `cd C:\ruta\a\HateDetect; python -m pytest tests -q; python -m py_compile app.py auth_google.py model_release.py`
-5. `git diff --check` y revisar `git diff`. Crear PR **borrador**, sin fusionar, cuando pase la revisión.
+### Modelo v3 homologado
+- Archivo: assets/model_v3.joblib
+- Scikit-learn: 1.9.1
+- SHA-256:
+  1b8d300ee3682437b724a2eccf8b9626526280e35e06c7cdaafe216843fe0470
+- Entrenamiento reproducido con 432 comentarios sinteticos.
+- Arquitectura: TF-IDF de caracteres y LogisticRegression.
+- No se utilizaron los 120 ejemplos reservados para reentrenar.
 
-## Funcionamiento seguro
+## 3. Evidencia de homologacion
 
-- `HATEDETECT_MODEL_VERSION` sin definir => **published**: modelo previo intacto, `model.pkl` original y metadatos actuales.
-- `HATEDETECT_MODEL_VERSION=v3` => exige `assets/model_v3.joblib`, SHA exacto y scikit-learn 1.8.0. Dado que producción usa 1.9.1, este modo **debe fallar de forma controlada**, en vez de cargar un pickle de versión incompatible.
-- Las entradas individual y por lotes comparten el clasificador seleccionado. Historial persistente registra la versión activa sin cambiar RLS.
-- Nunca descargar binarios desde URL en tiempo de inferencia ni cargar archivos joblib/pickle no verificados.
-- El parámetro de versión no se expone en la UI. Para cambiarlo se requiere cambiar configuración y reiniciar proceso.
+- Comparacion entre v3 original y homologado: 440 predicciones.
+- Coincidencia de etiquetas: 440 de 440.
+- Diferencias de categorias: 0.
+- No se ha demostrado equivalencia universal de probabilidades.
 
-## Bloqueadores antes de habilitar v3 en Streamlit Cloud
+## 4. Evaluacion exploratoria anterior
 
-1. Preparar una serialización v3 **compatible con scikit-learn 1.9.1** en un entorno aislado y controlado. El archivo incluido en el paquete se conserva solo como artefacto de comparación **en 1.8.0**.
-2. Congelar el **nuevo SHA** y la procedencia del artefacto compatible; actualizar `MODEL_CONFIGS['v3']` tras verificarlo. No usar los 120 comentarios para reajustar hiperparámetros.
-3. Probar paridad de predicciones del modelo homologado frente al modelo experimental fijado. Si cambia su comportamiento, documentar nueva versión y necesitar una evaluación independiente adicional antes de aceptar nuevas métricas.
-4. Pruebas de regresión: clasificación individual, lotes, CSV mal formado, texto vacío/largo, Unicode, historial Google/Supabase con dos cuentas, roles, RLS, Reportes y CSV. Verificar que solo se procesen entradas sintéticas de prueba.
-5. Ejecutar `python -m pytest tests -q` en el entorno exacto de producción (versiones de `requirements.txt`). Probar primero una app Streamlit **de staging distinta** de la publicada, sin mezclar secretos.
-6. Plan de reversión: quitar variable `HATEDETECT_MODEL_VERSION` (o poner `published`), reiniciar la instancia de staging y comprobar que el SHA publicado siga siendo el registrado. Para producción, regresar al commit previo si hay falla; nunca conservar una copia contaminada del modelo.
+Sobre 120 comentarios sinteticos con referencia asistida por IA:
+- Macro-F1 modelo publicado: 60.97 %.
+- Macro-F1 candidato v3: 89.36 %.
 
-**No se debe fusionar ni desplegar este parche hasta cerrar los bloqueadores.**
+Estos resultados no representan una validacion humana independiente
+ni permiten afirmar rendimiento equivalente sobre Reddit real.
+
+## 5. Pruebas de staging
+
+- 33 pruebas automatizadas aprobadas.
+- Carga real de published y v3 verificada.
+- Clasificacion individual comprobada.
+- Clasificacion por lotes comprobada con CSV de ejemplo.
+- Reportes historicos visibles.
+- Guardado y consulta de Historial temporal comprobados.
+
+La seccion Reportes presenta metricas del experimento historico
+de 72 comentarios, no las metricas de v3.
+
+## 6. Limitaciones conocidas
+
+- "hola" fue clasificado como Ofensivo.
+- "QUE HACES" y "¿Que haces?" fueron clasificados como Ofensivo.
+- Ambos casos son falsos positivos cualitativos.
+- Las probabilidades del clasificador no estan calibradas.
+
+No introducir reglas artificiales ni reentrenar con la prueba
+reservada para ocultar estos errores.
+
+## 7. Pruebas pendientes
+
+- Eliminacion de Historial temporal.
+- Google OAuth y persistencia en Supabase.
+- Permisos de usuarios, roles y politicas RLS.
+- CSV invalidos, filas vacias y limites de procesamiento.
+- Verificacion de un despliegue de staging independiente.
+- Revision de calidad antes de una promocion a produccion.
+
+## 8. Activacion y reversión
+
+Por defecto: HATEDETECT_MODEL_VERSION=published
+Para pruebas aisladas: HATEDETECT_MODEL_VERSION=v3
+
+Ambos artefactos se comprueban mediante SHA-256 y version
+de scikit-learn antes de deserializarse.
+
+Para regresar al modelo publicado, detener la instancia local,
+establecer HATEDETECT_MODEL_VERSION=published y reiniciar.
+
+NO fusionar con main ni desplegar en produccion
+hasta completar la revision de calidad y seguridad.
